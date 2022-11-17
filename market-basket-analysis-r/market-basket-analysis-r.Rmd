@@ -1,0 +1,154 @@
+---
+title: "Market Basket Analysis"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(readxl)
+library(ggplot2)
+library(dplyr)
+```
+
+## Data processing
+
+### Load the data
+
+Load the data downloaded from http://archive.ics.uci.edu/ml/datasets/online+retail 
+
+```{r}
+online_retail_data <- read_excel('./data/online-retail.xlsx')
+online_retail_data <- online_retail_data[complete.cases(online_retail_data), ]
+str(online_retail_data)
+```
+
+### Data cleaning:
+
+We have negative quantities, we can remove them:
+```{r}
+online_retail_data <- filter(online_retail_data, Quantity > 0)
+```
+
+We have prices as 0, we can remove them as well:
+```{r}
+online_retail_data <- filter(online_retail_data, UnitPrice > 0)
+```
+
+Based on the below code we can safely say that we don't have any NA values in the dataset:
+```{r}
+which(is.na(online_retail_data))
+```
+
+### Convert the data types and formats of the fields:
+
+Here the columns CustomerID, Country, StockCode can be changed to factor. 
+
+```{r}
+online_retail_data$Country <- as.factor(online_retail_data$Country)
+online_retail_data$CustomerID <- as.factor(online_retail_data$CustomerID)
+online_retail_data$StockCode <- as.factor(online_retail_data$StockCode)
+```
+
+Similarly we can construct the PurchaseTime and PurchaseTimeInHours of the goods from invoice date and convert the InvoiceDate to Date datatype. 
+```{r}
+online_retail_data$PurchaseTime <- format(online_retail_data$InvoiceDate,"%H:%M:%S")
+online_retail_data$PurchaseTimeInHours <- format(online_retail_data$InvoiceDate,"%H")
+online_retail_data$InvoiceDate <- as.Date(online_retail_data$InvoiceDate)
+```
+
+We can construct total cose of the oder
+```{r}
+online_retail_data$TotalCost <- online_retail_data$Quantity * online_retail_data$UnitPrice
+```
+
+### Save the data into csv format:
+```{r}
+write_csv(online_retail_data, file="./data/online-retail.csv")
+```
+
+## Exploratory Analysis:
+
+### Top 10 countries based on orders
+
+```{r}
+bar_graph_data <- online_retail_data %>% 
+  group_by(Country) %>% 
+  summarize(count = n()) %>% 
+  arrange(desc(count))
+bar_graph_data <- head(bar_graph_data, n=10)
+
+ggplot(bar_graph_data, aes(x=count, y=Country, fill=Country)) + 
+  geom_bar(stat = "identity") +
+  ggtitle("Top 10 countries based on orders") +
+  xlab("Number of orders")
+```
+
+### Purchases on the hour of the day
+
+```{r}
+  ggplot(online_retail_data, aes(x=PurchaseTimeInHours)) + 
+  geom_histogram(stat="count", fill="green") +
+  ggtitle("Purchases on the hour of the day") +
+  xlab("Time in hours") +
+  ylab("Number of purchases")
+```
+### Top 10 customers based on number of orders placed
+
+```{r}
+bar_graph_data <- online_retail_data %>% 
+  group_by(CustomerID) %>% 
+  summarize(Count = n()) %>% 
+  arrange(desc(Count))
+bar_graph_data <- head(bar_graph_data, n=10)
+
+ggplot(bar_graph_data, aes(x=Count, y=CustomerID, fill=CustomerID)) + 
+  geom_bar(stat = "identity") +
+  ggtitle("Top 10 customers based on orders") +
+  xlab("Number of orders")
+```
+
+### Top 10 items sold
+
+```{r}
+bar_graph_data <- online_retail_data %>% 
+  group_by(StockCode) %>% 
+  summarize(Count = n()) %>% 
+  arrange(desc(Count))
+bar_graph_data <- head(bar_graph_data, n=10)
+bar_graph_data
+
+ggplot(bar_graph_data, aes(x=Count, y=StockCode, fill=StockCode)) + 
+  geom_bar(stat = "identity") +
+  ggtitle("Top 10 items based on orders") +
+  xlab("Number of orders")
+```
+
+### Top 20 expensive orders
+
+```{r}
+bar_graph_data <- online_retail_data %>% 
+  arrange(desc(TotalCost))
+bar_graph_data <- head(bar_graph_data, n=20)
+
+ggplot(bar_graph_data, aes(x=TotalCost, y=InvoiceNo, fill=InvoiceNo)) + 
+  geom_bar(stat = "identity") +
+  ggtitle("Top 20 expensive orders") +
+  xlab("Total Cost")
+```
+
+### Top 10 least expensive items
+```{r}
+bar_graph_data <- online_retail_data %>% 
+  arrange(desc(TotalCost))
+bar_graph_data <- tail(bar_graph_data, n=10)
+
+ggplot(bar_graph_data, aes(x=TotalCost, y=InvoiceNo, fill=InvoiceNo)) + 
+  geom_bar(stat = "identity") +
+  ggtitle("Top 10 least expensive orders") +
+  xlab("Total Cost")
+```
+
+
+
+
+
